@@ -16,8 +16,11 @@ module Sfx {
         module.directive("sfxSlider", () => new SliderDirective());
         module.directive("sfxDetailViewPart", () => new DetailViewPartDirective());
         module.directive("sfxDetailList", () => new DetailListDirective());
+        module.directive("sfxDetailListDetailsView", () => new DetailListDetailsViewDirective());
         module.directive("sfxMetricsBarChart", MetricsBarChartDirective.factory());
         module.directive("sfxDashboard", DashboardChartDirective.factory());
+        module.directive("sfxImageStoreView", () => new ImageStoreViewDirective());
+        module.directive("sfxImageStoreFileView", () => new ImageStoreOptionsViewDirective());
 
         module.directive("sfxThemeImport", ["theme", (themeService: ThemeService): angular.IDirective => {
             return {
@@ -105,6 +108,44 @@ module Sfx {
                 }
             };
         });
+
+        // When navigating in the tree view through arrow keys, make sure the selected node also gets
+        // the focus since it could have been set on some other elements by using the tab key.
+        module.directive("sfxTreeSetFocus", ["$timeout", function ($timeout) {
+            return {
+                restrict: "A",
+                link: function ($scope: any, $element: any, $attributes: any) {
+                    $attributes.$observe("selected", function (selected) {
+                        if (selected !== "true") {
+                            return;
+                        }
+
+                        $timeout(function () {
+                            $(".self:first", $element).focus();
+                        });
+                    });
+                }
+            };
+        }]);
+
+        module.directive("sfxTabSetFocus", ["$timeout", function ($timeout) {
+            return {
+                restrict: "A",
+                link: function ($scope: any, $element: any, $attributes: any) {
+                    $attributes.$observe("active", function (active) {
+                        if (active !== "true") {
+                            return;
+                        }
+
+                        $timeout(function () {
+                            if ($(":focus").length === 0) {
+                                $($element).focus();
+                            }
+                        }, 100);
+                    });
+                }
+            };
+        }]);
 
         module.directive("sfxTreeNode", (): angular.IDirective => {
             return {
@@ -215,11 +256,20 @@ module Sfx {
         module.directive(_.camelCase(Constants.DirectiveNameUpgradeProgress), (): angular.IDirective => {
             return {
                 restrict: "E",
-                replace: true,
                 scope: {
                     upgradeDomains: "="
                 },
                 templateUrl: "partials/upgrade-progress.html"
+            };
+        });
+
+        module.directive("sfxUpgradeDomainProgress", (): angular.IDirective => {
+            return {
+                restrict: "E",
+                scope: {
+                    nodeUpgradeProgressList: "="
+                },
+                templateUrl: "partials/upgrade-domain-progress.html"
             };
         });
 
@@ -246,6 +296,28 @@ module Sfx {
             };
         });
 
+        module.directive("sfxEventsView", () => new EventsViewDirective());
+
         module.directive("sfxTextFileInput", () => new TextFileInputDirective());
+
+        module.directive("sfxDatePicker", () => new DatePickerDirective());
+
+        module.directive("sfxListShorten", (): angular.IDirective => {
+            return {
+                restrict: "E",
+                replace: true,
+                scope: {
+                    list: "="
+                },
+                templateUrl: "partials/long-list-shorten.html",
+                link: function ($scope: any, $element, $attributes: any) {
+                    $scope.opened = false;
+                    $scope.flip = (): void => {
+                        $scope.opened  = !$scope.opened;
+                    };
+                }
+            };
+        });
+
     })();
 }

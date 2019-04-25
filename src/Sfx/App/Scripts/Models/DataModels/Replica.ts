@@ -14,6 +14,9 @@ module Sfx {
                 },
                 "NodeName": {
                     displayValueInHtml: (value) => HtmlUtils.getLinkHtml(value, this.nodeViewPath)
+                },
+                "ReplicaRole": {
+                    displayValueInHtml: (value) => this.role
                 }
             }
         };
@@ -28,6 +31,14 @@ module Sfx {
             this.health = new ReplicaHealth(this.data, this, HealthStateFilterFlags.Default);
             this.detail = new DeployedReplicaDetail(this.data, this);
             this.updateInternal();
+
+            if (this.data.actionsEnabled()) {
+                this.setUpActions();
+            }
+        }
+
+        public restartReplica(): angular.IPromise<any> {
+            return this.data.restClient.restartReplica(this.raw.NodeName, this.parent.raw.PartitionInformation.Id, this.raw.ReplicaId);
         }
 
         public get isStatefulService(): boolean {
@@ -44,6 +55,14 @@ module Sfx {
 
         public get name(): string {
             return this.id;
+        }
+
+        public get role(): string {
+            if (this.parent.raw.PartitionStatus === "Reconfiguring") {
+                return `Reconfiguring - Target Role: ${this.raw.ReplicaRole}`;
+            }
+
+            return this.raw.ReplicaRole;
         }
 
         public get viewPath(): string {
@@ -63,12 +82,30 @@ module Sfx {
         }
 
         protected retrieveNewData(messageHandler?: IResponseMessageHandler): angular.IPromise<any> {
-            return Utils.getHttpResponseData(this.data.restClient.getReplicaOnPartition(
-                this.parent.parent.parent.id, this.parent.parent.id, this.parent.id, this.id, messageHandler));
+            // Refresh the parent partition here as well because we need its status to display the correct role name
+            return this.parent.refresh().then(
+                () => Utils.getHttpResponseData(this.data.restClient.getReplicaOnPartition(this.parent.parent.parent.id, this.parent.parent.id, this.parent.id, this.id, messageHandler)));
         }
 
         protected updateInternal(): angular.IPromise<any> | void {
             this.address = Utils.parseReplicaAddress(this.raw.Address);
+        }
+
+        private setUpActions(): void {
+            let serviceName = this.parent.parent.raw.Name;
+
+            this.actions.add(new ActionWithConfirmationDialog(
+                this.data.$uibModal,
+                this.data.$q,
+                "Restart Replica",
+                "Restart Replica",
+                "Restarting",
+                () => this.restartReplica(),
+                () => true,
+                `Confirm Replica Restart`,
+                `Restart Replica for ${serviceName}`,
+                "confirm"
+            ));
         }
     }
 

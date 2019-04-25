@@ -28,6 +28,8 @@ module Sfx {
             "clusterViewController",
             "nodeViewController",
             "nodesViewController",
+            "networksViewController",
+            "networkViewController",
             "appTypeViewController",
             "appsViewController",
             "appViewController",
@@ -44,10 +46,13 @@ module Sfx {
             "systemAppsViewController",
             "themeController",
             "settingsController",
+            "headerAlertController",
             "templates", // Template cache module generated from partials by gulp-angular-templatecache plugin
             "responseHeadersService",
-        ]);
-
+            "ngAria"
+        ]).config(["$rootScopeProvider", function ($rootScopeProvider) {
+            $rootScopeProvider.digestTtl(20);
+        }]);
     })();
 }
 

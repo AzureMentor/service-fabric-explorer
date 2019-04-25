@@ -1,12 +1,12 @@
 ﻿<sfx-detail-view-navbar ctrl="nodeCtrl" actions="node.actions" type="Node" name="{{node.name}}"></sfx-detail-view-navbar>
 
 <section class="main-view">
-    <div sfx-include src="'tab_' + nodeCtrl.activeTabId" ng-if="nodeCtrl.activeTabId"></div>
+    <div sfx-include src="'tab_' + nodeCtrl.activeTabId" ng-if="nodeCtrl.activeTabId" class="flex-child"></div>
 
     <script type="text/ng-template" id="tab_essentials">
         <div class="detail-pane essen-pane">
             <div class="table-responsive">
-                <table class="essen-table">
+                <table class="essen-table" role="presentation">
                     <tr>
                         <th>Name</th>
                         <th>Upgrade Domain</th>
@@ -53,6 +53,10 @@
             <h4>Deployed Applications</h4>
             <sfx-detail-list list="deployedApps" list-settings="listSettings"></sfx-detail-list>
         </div>
+        <div class="detail-pane" ng-if="clusterManifest.isNetworkInventoryManagerEnabled">
+            <h4>Networks</h4>
+            <sfx-detail-list list="networks" list-settings="networkListSettings"></sfx-detail-list>
+        </div>
     </script>
 
     <script type="text/ng-template" id="tab_details">
@@ -71,5 +75,9 @@
             <h4>Load Metric Information</h4>
             <sfx-detail-view-part data="node.loadInformation"></sfx-detail-view-part>
         </div>
+    </script>
+
+    <script type="text/ng-template" id="tab_events">
+        <sfx-events-view events-list="nodeEvents" class="flex-child"></sfx-events-view>
     </script>
 </section>

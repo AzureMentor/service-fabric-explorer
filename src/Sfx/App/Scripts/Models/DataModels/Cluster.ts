@@ -49,6 +49,8 @@ module Sfx {
 
     export class ClusterManifest extends DataModelBase<IRawClusterManifest> {
         public clusterManifestName: string;
+        private _imageStoreConnectionString: string;
+        private _isNetworkInventoryManagerEnabled: boolean = false;
 
         public constructor(data: DataService) {
             super(data);
@@ -62,13 +64,30 @@ module Sfx {
             let $xml = $($.parseXML(this.raw.Manifest));
             let $manifest = $xml.find("ClusterManifest")[0];
             this.clusterManifestName = $manifest.getAttribute("Name");
+            let $imageStoreConnectionStringParameter = $("Section[Name='Management'] > Parameter[Name='ImageStoreConnectionString']", $manifest);
+            if ($imageStoreConnectionStringParameter.length > 0) {
+                this._imageStoreConnectionString = $imageStoreConnectionStringParameter.attr("Value");
+            }
+
+            let $nimEnabledParameter = $("Section[Name=NetworkInventoryManager] > Parameter[Name='IsEnabled']", $manifest);
+            if ($nimEnabledParameter.length > 0) {
+                this._isNetworkInventoryManagerEnabled = $nimEnabledParameter.attr("Value").toLowerCase() === "true";
+            }
+        }
+
+        public get isNetworkInventoryManagerEnabled(): boolean {
+            return this._isNetworkInventoryManagerEnabled;
+        }
+
+        public get imageStoreConnectionString(): string {
+            return this._imageStoreConnectionString;
         }
     }
 
     export class ClusterUpgradeProgress extends DataModelBase<IRawClusterUpgradeProgress> {
         public decorators: IDecorators = {
             hideList: [
-                // Unhealthy evaluations are displayed in seperate section in app detail page
+                // Unhealthy evaluations are displayed in separate section in app detail page
                 "UnhealthyEvaluations"
             ],
             decorators: {
@@ -87,6 +106,10 @@ module Sfx {
         public upgradeDomains: UpgradeDomain[] = [];
         public upgradeDescription: UpgradeDescription;
 
+        public get isUpgrading(): boolean {
+            return UpgradeDomainStateRegexes.InProgress.test(this.raw.UpgradeState);
+        }
+
         public get startTimestampUtc(): string {
             return TimeUtils.timestampToUTCString(this.raw.StartTimestampUtc);
         }
@@ -95,13 +118,49 @@ module Sfx {
             return TimeUtils.timestampToUTCString(this.raw.FailureTimestampUtc);
         }
 
+        public get upgradeDuration(): string {
+            return TimeUtils.getDuration(this.raw.UpgradeDurationInMilliseconds);
+        }
+
+        public get upgradeDomainDuration(): string {
+            return TimeUtils.getDuration(this.raw.UpgradeDomainDurationInMilliseconds);
+        }
+
+        public getCompletedUpgradeDomains(): number {
+            return _.filter(this.upgradeDomains, upgradeDomain => {return upgradeDomain.stateName === UpgradeDomainStateNames.Completed}).length;
+        }
+
         protected retrieveNewData(messageHandler?: IResponseMessageHandler): angular.IPromise<IRawClusterUpgradeProgress> {
-            return Utils.getHttpResponseData(this.data.restClient.getClusterUpgradeProgress(messageHandler));
+            return this.data.$q( (resolve, reject) => {
+                Utils.getHttpResponseData(this.data.restClient.getClusterUpgradeProgress(messageHandler)).then(data => {
+
+                    //if the code version is "0.0.0.0" this means there has not been a baseline upgrade and will require querying for the actual code versin of the cluster
+                    if (data.CodeVersion === "0.0.0.0") {
+                        Utils.getHttpResponseData(this.data.restClient.getClusterVersion())
+                        .then(resp => {
+                            //set codeVersion here, essentially swapping it out
+                            data.CodeVersion = resp.Version;
+                        }).finally( () => {
+                            resolve(data);
+                        });
+
+                    }else {
+                        resolve(data);
+                    }
+                });
+            });
+
         }
 
         protected updateInternal(): angular.IPromise<any> | void {
             this.unhealthyEvaluations = Utils.getParsedHealthEvaluations(this.raw.UnhealthyEvaluations);
-            CollectionUtils.updateDataModelCollection(this.upgradeDomains, _.map(this.raw.UpgradeDomains, ud => new UpgradeDomain(this.data, ud)));
+            let domains = _.map(this.raw.UpgradeDomains, ud => new UpgradeDomain(this.data, ud));
+            let groupedDomains = _.filter(domains, ud => ud.stateName === UpgradeDomainStateNames.Completed)
+                .concat(_.filter(domains, ud => ud.stateName === UpgradeDomainStateNames.InProgress))
+                .concat(_.filter(domains, ud => ud.name === this.raw.NextUpgradeDomain))
+                .concat(_.filter(domains, ud => ud.stateName === UpgradeDomainStateNames.Pending && ud.name !== this.raw.NextUpgradeDomain));
+
+            this.upgradeDomains = groupedDomains;
 
             if (this.raw.UpgradeDescription) {
                 this.upgradeDescription = new UpgradeDescription(this.data, this.raw.UpgradeDescription);

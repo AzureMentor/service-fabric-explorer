@@ -17,12 +17,17 @@ module Sfx {
 
         public address: any;
         public detail: DeployedReplicaDetail;
+        public partition: IRawPartition;
 
         public constructor(data: DataService, raw: IRawDeployedReplica, public parent: DeployedServicePackage) {
             super(data, raw, parent);
 
             this.detail = new DeployedReplicaDetail(this.data, this);
             this.updateInternal();
+
+            if (this.data.actionsEnabled()) {
+                this.setUpActions();
+            }
         }
 
         public get servicePackageActivationId(): string {
@@ -53,6 +58,14 @@ module Sfx {
             return this.id;
         }
 
+        public get role(): string {
+            if (this.partition && this.partition.PartitionStatus === "Reconfiguring") {
+                return `Reconfiguring - Target Role: ${this.raw.ReplicaRole}`;
+            }
+
+            return this.raw.ReplicaRole;
+        }
+
         public get viewPath(): string {
             return this.data.routes.getDeployedReplicaViewPath(this.parent.parent.parent.name, this.parent.parent.id, this.parent.id, this.parent.servicePackageActivationId, this.raw.PartitionId, this.id);
         }
@@ -65,16 +78,38 @@ module Sfx {
             return SortPriorities.ReplicaRolesToSortPriorities[this.raw.ReplicaRole] || 0;
         }
 
+        public restartReplica(): angular.IPromise<any> {
+            return this.data.restClient.restartReplica(this.parent.parent.parent.raw.Name, this.raw.PartitionId, this.raw.ReplicaId);
+        }
+
         protected retrieveNewData(messageHandler?: IResponseMessageHandler): angular.IPromise<IRawDeployedReplica> {
-            return this.data.restClient.getDeployedReplica(
-                this.parent.parent.parent.name, this.parent.parent.id, this.parent.name, this.raw.PartitionId, messageHandler)
-                .then(response => {
-                    return _.first(response.data);
-                });
+            const promises: angular.IPromise<any>[] = [
+                this.data.restClient.getPartitionById(this.raw.PartitionId, ResponseMessageHandlers.silentResponseMessageHandler).then(response => this.partition = response.data),
+                this.data.restClient.getDeployedReplica(this.parent.parent.parent.name, this.parent.parent.id, this.parent.name, this.raw.PartitionId, messageHandler).then(response => { return _.first(response.data); })
+            ];
+
+            return this.data.$q.all(promises).then((values) => values[1]);
         }
 
         protected updateInternal(): angular.IPromise<any> | void {
             this.address = Utils.parseReplicaAddress(this.raw.Address);
+        }
+
+        private setUpActions(): void {
+            let serviceName = this.parent.parent.raw.Name;
+
+            this.actions.add(new ActionWithConfirmationDialog(
+                this.data.$uibModal,
+                this.data.$q,
+                "Restart Replica",
+                "Restart Replica",
+                "Restarting",
+                () => this.restartReplica(),
+                () => true,
+                `Confirm Replica Restart`,
+                `Restart Replica for ${serviceName}`,
+                "confirm"
+            ));
         }
     }
 

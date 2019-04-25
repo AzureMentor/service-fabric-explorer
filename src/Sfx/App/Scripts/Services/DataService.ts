@@ -13,16 +13,17 @@ module Sfx {
         public appTypeGroups: ApplicationTypeGroupCollection;
         public apps: ApplicationCollection;
         public nodes: NodeCollection;
-
-        public restClient: RestClient;
+        public imageStore: ImageStore;
+        public networks: NetworkCollection;
 
         public constructor(
             public routes: RoutesService,
             public message: MessageService,
             public telemetry: TelemetryService,
             public $location: angular.ILocationService,
-            public $http: angular.IHttpService,
+            public restClient: RestClient,
             public $q: angular.IQService,
+            public $timeout: angular.ITimeoutService,
             public $uibModal: angular.ui.bootstrap.IModalService,
             public $route: angular.route.IRouteService,
             public $sanitize: angular.sanitize.ISanitizeService,
@@ -35,8 +36,8 @@ module Sfx {
             this.appTypeGroups = new ApplicationTypeGroupCollection(this);
             this.apps = new ApplicationCollection(this);
             this.nodes = new NodeCollection(this);
-
-            this.restClient = new RestClient($http, message);
+            this.imageStore = new ImageStore(this);
+            this.networks = new NetworkCollection(this);
         }
 
         public actionsEnabled(): boolean {
@@ -117,6 +118,16 @@ module Sfx {
             return this.getNodes(false, messageHandler).then(collection => {
                 return this.tryGetValidItem(collection, name, forceRefresh, messageHandler);
             });
+        }
+
+        public getNetwork(networkName: string, forceRefresh?: boolean, messageHandler?: IResponseMessageHandler): angular.IPromise<Network> {
+            return this.getNetworks(false, messageHandler).then(collection => {
+                return this.tryGetValidItem(collection, networkName, forceRefresh, messageHandler);
+            });
+        }
+
+        public getNetworks(forceRefresh?: boolean, messageHandler?: IResponseMessageHandler): angular.IPromise<NetworkCollection> {
+            return this.networks.ensureInitialized(forceRefresh, messageHandler);
         }
 
         public getAppTypeGroups(forceRefresh?: boolean, messageHandler?: IResponseMessageHandler): angular.IPromise<ApplicationTypeGroupCollection> {
@@ -236,6 +247,34 @@ module Sfx {
             });
         }
 
+        public createClusterEventList(): ClusterEventList {
+            return new ClusterEventList(this);
+        }
+
+        public createNodeEventList(nodeName?: string): NodeEventList {
+            return new NodeEventList(this, nodeName);
+        }
+
+        public createApplicationEventList(applicationId?: string): ApplicationEventList {
+            return new ApplicationEventList(this, applicationId);
+        }
+
+        public createServiceEventList(serviceId?: string): ServiceEventList {
+            return new ServiceEventList(this, serviceId);
+        }
+
+        public createPartitionEventList(partitionId?: string): PartitionEventList {
+            return new PartitionEventList(this, partitionId);
+        }
+
+        public createReplicaEventList(partitionId: string, replicaId?: string): ReplicaEventList {
+            return new ReplicaEventList(this, partitionId, replicaId);
+        }
+
+        public createCorrelatedEventList(eventInstanceId: string) {
+            return new CorrelatedEventList(this, eventInstanceId);
+        }
+
         private tryGetValidItem<T extends IDataModel<any>>(collection: IDataModelCollection<T>, uniqueId: string, forceRefresh?: boolean, messageHandler?: IResponseMessageHandler): angular.IPromise<any> {
             let item = collection.find(uniqueId);
             if (item) {
@@ -287,15 +326,10 @@ module Sfx {
 
     (function () {
 
-        let module = angular.module("dataService", ["routes", "messages", "ui.bootstrap", "ngSanitize"]);
-        module.factory("data", ["routes", "message", "telemetry", "$location", "$http", "$q", "$uibModal", "$route", "$sanitize", "$rootScope",
-            (routes, message, telemetry, $location, $http, $q, $uibModal, $route, $sanitize, $rootScope) =>
-                new DataService(routes, message, telemetry, $location, $http, $q, $uibModal, $route, $sanitize, $rootScope)]);
-
-        module.run(["$http", function ($http: angular.IHttpService) {
-            $http.defaults.headers.common[Constants.SfxVersionMetadataName] = VersionInfo.Version;
-            $http.defaults.headers.common[Constants.SfxBuildMetadataName] = VersionInfo.Build;
-        }]);
+        let module = angular.module("dataService", ["routes", "messages", "ui.bootstrap", "ngSanitize", "restClientService"]);
+        module.factory("data", ["routes", "message", "telemetry", "$location", "restClient", "$q", "$timeout", "$uibModal", "$route", "$sanitize", "$rootScope",
+            (routes, message, telemetry, $location, restClient, $q, $timeout, $uibModal, $route, $sanitize, $rootScope) =>
+                new DataService(routes, message, telemetry, $location, restClient, $q, $timeout, $uibModal, $route, $sanitize, $rootScope)]);
 
         // Upon the route change [ie, user navigation], let us know that the cache is no longer valid.
         module.run(["$rootScope", "data", function ($rootScope: angular.IRootScopeService, data: DataService) {

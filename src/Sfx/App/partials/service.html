@@ -1,12 +1,12 @@
 ﻿<sfx-detail-view-navbar ctrl="serviceCtrl" actions="service.actions" type="Service" name="{{service.name}}"></sfx-detail-view-navbar>
 
 <div class="main-view">
-    <div sfx-include src="'tab_' + serviceCtrl.activeTabId" ng-if="serviceCtrl.activeTabId"></div>
+    <div sfx-include src="'tab_' + serviceCtrl.activeTabId" ng-if="serviceCtrl.activeTabId" class="flex-child"></div>
 
     <script type="text/ng-template" id="tab_essentials">
         <div class="detail-pane essen-pane">
             <div class="table-responsive">
-                <table class="essen-table">
+                <table class="essen-table" role="presentation">
                     <tbody>
                         <tr>
                             <th>Name</th>
@@ -28,7 +28,7 @@
                     <tbody ng-if="service.isStatefulService">
                         <tr>
                             <th>Status</th>
-                            <th>Minimum Replica Size</th>
+                            <th>Minimum Replica Set Size</th>
                         </tr>
                         <tr>
                             <td>{{service.raw.ServiceStatus}}</td>
@@ -36,7 +36,7 @@
                         </tr>
                         <tr>
                             <th>Service Kind</th>
-                            <th>Target Replica Size</th>
+                            <th>Target Replica Set Size</th>
                         </tr>
                         <tr>
                             <td>{{service.raw.ServiceKind}}</td>
@@ -104,8 +104,12 @@
 
     <script type="text/ng-template" id="tab_manifest">
         <div class="detail-pane">
-            <pre><code>{{serviceManifest}}</code></pre>
+            <pre role="presentation" tabindex="0"><code aria-label="service manifest">{{serviceManifest}}</code></pre>
         </div>
+    </script>
+
+    <script type="text/ng-template" id="tab_events">
+        <sfx-events-view events-list="serviceEvents" class="flex-child"></sfx-events-view>
     </script>
 
 </div>

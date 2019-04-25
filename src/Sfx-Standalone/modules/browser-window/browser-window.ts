@@ -3,60 +3,21 @@
 // Licensed under the MIT License. See License file under the project root for license information.
 //-----------------------------------------------------------------------------
 
-import { dialog, BrowserWindow, app, BrowserWindowConstructorOptions } from "electron";
-import * as url from "url";
+import { ISfxModuleManager } from "sfx.module-manager";
 
-import { env, Platform } from "../../utilities/env";
-import * as authCert from "../../utilities/auth/cert";
-import * as authAad from "../../utilities/auth/aad";
+import { BrowserWindow, app, BrowserWindowConstructorOptions } from "electron";
+
+import { local } from "donuts.node/path";
+import * as utils from "donuts.node/utils";
+import * as shell from "donuts.node/shell";
 import * as appUtils from "../../utilities/appUtils";
-import * as utils from "../../utilities/utils";
-import error from "../../utilities/errorUtil";
-import { local } from "../../utilities/resolve";
-
-function handleSslCert(window: BrowserWindow): void {
-    let trustedCertManager: IDictionary<boolean> = {};
-
-    window.webContents.on("certificate-error", (event, urlString, error, certificate, trustCertificate) => {
-        event.preventDefault();
-
-        let certIdentifier = url.parse(urlString).hostname + certificate.subjectName;
-
-        if (certIdentifier in trustedCertManager) {
-            trustCertificate(trustedCertManager[certIdentifier]);
-        } else {
-            trustedCertManager[certIdentifier] = false;
-
-            dialog.showMessageBox(
-                window,
-                {
-                    type: "warning",
-                    buttons: ["Yes", "Exit"],
-                    title: "Untrusted certificate",
-                    message: "Do you want to trust this certificate?",
-                    detail: "Subject: " + certificate.subjectName + "\r\nIssuer: " + certificate.issuerName + "\r\nThumbprint: " + certificate.fingerprint,
-                    cancelId: 1,
-                    defaultId: 0,
-                    noLink: true,
-                },
-                (response, checkboxChecked) => {
-                    if (response !== 0) {
-                        app.quit();
-                        return;
-                    }
-
-                    trustedCertManager[certIdentifier] = true;
-                    trustCertificate(true);
-                });
-        }
-    });
-}
+import * as modularity from "donuts.node-modularity";
 
 function handleNewWindow(window: BrowserWindow) {
     window.webContents.on("new-window",
         (event, urlString, frameName, disposition, options, additionalFeatures) => {
             event.preventDefault();
-            env.start(urlString);
+            shell.start(urlString);
         });
 }
 
@@ -86,12 +47,24 @@ function handleZoom(window: BrowserWindow) {
         });
 }
 
-export default function createBrowserWindow(moduleManager: IModuleManager, options?: BrowserWindowConstructorOptions, handleAuth?: boolean, aadTargetHostName?: string): BrowserWindow {
-    handleAuth = utils.getEither(handleAuth, false);
-
-    if (handleAuth && String.isNullUndefinedOrWhitespace(aadTargetHostName)) {
-        throw error("if auth handling is required, aadTargetHostName must be supplied.");
+function addModuleManagerConstructorOptions(
+    windowOptions: BrowserWindowConstructorOptions,
+    moduleManager: ISfxModuleManager)
+    : void {
+    if (!windowOptions.webPreferences) {
+        windowOptions.webPreferences = Object.create(null);
     }
+
+    windowOptions.webPreferences["additionalArguments"] = [
+        shell.toCmdArg(
+            modularity.CmdArgs.ConnectionInfo,
+            JSON.stringify(modularity.getConnectionInfo(moduleManager)))];
+}
+
+export default async function createBrowserWindowAsync(
+    moduleManager: ISfxModuleManager,
+    options?: BrowserWindowConstructorOptions)
+    : Promise<BrowserWindow> {
 
     const windowOptions: BrowserWindowConstructorOptions = {
         height: 768,
@@ -99,11 +72,13 @@ export default function createBrowserWindow(moduleManager: IModuleManager, optio
         show: false,
         icon: appUtils.getIconPath(),
         webPreferences: {
-            preload: local("./preload.js", false)
-        }
+            preload: local("./preload.js"),
+            nodeIntegration: true
+        },
+        title: "Service Fabric Explorer"
     };
 
-    if (Object.isObject(options)) {
+    if (utils.isObject(options)) {
         const webPreferences = windowOptions.webPreferences;
 
         Object.assign(webPreferences, options.webPreferences);
@@ -111,24 +86,20 @@ export default function createBrowserWindow(moduleManager: IModuleManager, optio
         windowOptions.webPreferences = webPreferences;
     }
 
+    addModuleManagerConstructorOptions(windowOptions, moduleManager);
+
     const window = new BrowserWindow(windowOptions);
-
+    
     window.on("page-title-updated", (event, title) => event.preventDefault());
-    window.setTitle(String.format("{} - {}", window.getTitle(), app.getVersion()));
+    window.setTitle(`${window.getTitle()} - ${app.getVersion()}`);
 
-    handleSslCert(window);
     handleNewWindow(window);
 
-    if (env.platform !== Platform.MacOs) {
+    if (process.platform !== "darwin") {
         handleZoom(window);
     }
 
-    if (handleAuth) {
-        authCert.handle(moduleManager, window);
-        authAad.handle(window, aadTargetHostName);
-    }
-
-    window.on("ready-to-show", () => window.show());
+    window.once("ready-to-show", () => window.show());
 
     return window;
 }

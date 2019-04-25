@@ -7,11 +7,23 @@ module Sfx {
 
     export class ListSettings {
         public search: string;
-        public count: number = 0;
         public sortPropertyPaths: string[] = [];
         public sortReverse: boolean = false;
 
         private _currentPage: number = 1;
+        private _itemCount: number = 0;
+
+        public get count(): number {
+            return this._itemCount;
+        }
+
+        public set count(itemCount: number) {
+            this._itemCount = itemCount;
+
+            if (this.currentPage > this.pageCount) {
+                this.currentPage = this.pageCount;
+            }
+        }
 
         public get currentPage(): number {
             return this._currentPage;
@@ -114,6 +126,8 @@ module Sfx {
         // This will be populated by DetailListDirective when the list changes.
         public filterValues: FilterValue[] = [];
 
+        public fixedWidthPx?: number;
+
         public get hasFilters(): boolean {
             return this.enableFilter && this.filterValues.length > 0;
         }
@@ -134,6 +148,7 @@ module Sfx {
          * @param enableFilter Whether to enable filters for this column
          * @param getDisplayHtml Customize the HTML to render in this column giving a specific item
          * @param colspan The colspan for the extra line, does not affect the first line
+         * @param clickEvent A callback that will be executed on click
          */
         public constructor(
             public propertyPath: string,
@@ -141,7 +156,8 @@ module Sfx {
             public sortPropertyPaths: string[] = [propertyPath],
             public enableFilter?: boolean,
             public getDisplayHtml?: (item, property) => string,
-            public colspan: number = 1) {
+            public colspan: number = 1,
+            public clickEvent: (item) => void = (item) => null ) {
         }
 
         public reset(): void {
@@ -149,6 +165,10 @@ module Sfx {
         }
 
         public getProperty(item: any): any {
+            if (this.propertyPath && _.startsWith(this.propertyPath, "#")) {
+                return this.propertyPath.substr(1);
+            }
+
             return Utils.result(item, this.propertyPath);
         }
 
@@ -216,5 +236,7 @@ module Sfx {
             super(propertyPath, displayName, [propertyPath], false, (item, property) => HtmlUtils.getLinkHtml(property, href(item)));
         }
     }
+
+
 }
 

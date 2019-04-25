@@ -3,19 +3,18 @@
 // Licensed under the MIT License. See License file under the project root for license information.
 //-----------------------------------------------------------------------------
 
-import createBrowserWindow from "./browser-window";
+import * as shell from "donuts.node/shell";
 
-export function getModuleMetadata(): IModuleInfo {
-    return {
+(<Donuts.Modularity.IModule>exports).getModuleMetadata = (components): Donuts.Modularity.IModuleInfo => {
+    components.register<any>({
         name: "browser-window",
-        version: "1.0.0",
-        components: [
-            {
-                name: "browser-window",
-                version: "1.0.0",
-                descriptor: createBrowserWindow,
-                deps: ["module-manager"]
-            }
-        ]
+        version: shell.getAppVersion(),
+        descriptor: require("./browser-window").default,
+        deps: ["module-manager"]
+    });
+
+    return {
+        name: "electron",
+        version: shell.getAppVersion()
     };
-}
+};

@@ -15,6 +15,18 @@ module Sfx {
         //     int64.max / 10000000 = 922337203685477.5807;
         public static MaxDurationInMilliseconds: number = 922337203685477.5807;
 
+        public static AddSeconds(toDate: Date, seconds: number): Date {
+            let date = new Date(toDate.valueOf());
+            date.setTime(date.getTime() + (seconds * 1000));
+            return date;
+        }
+
+        public static AddDays(toDate: Date, days: number): Date {
+            let date = new Date(toDate.valueOf());
+            date.setDate(date.getDate() + days);
+            return date;
+        }
+
         /**
          * Format the input duration as ASP.NET time span format: "[days].[hours]:[minutes]:[seconds].[milliseconds].
          * If format is not numeric or ISO 8601, return as is.
@@ -46,6 +58,14 @@ module Sfx {
         }
 
         /**
+         * Format the input datetime as string e.g. "Fri, 28 Apr 2017 02:30:38 PST"
+         * @param datetime js Date object.
+         */
+        public static datetimeToString(datetime: Date): string {
+            return moment(datetime).format("MMM D, YYYY [at] h:mm:ss A (ZZ)");
+        }
+
+        /**
          * Format the input timestamp as UTC string e.g. "Fri, 28 Apr 2017 02:30:38 GMT"
          * @param timestamp in UTC datetime format e.g. "2017-04-28T02:30:38.307Z"
          */
@@ -67,7 +87,7 @@ module Sfx {
                 + `${_.padStart(Math.floor(duration.hours()).toString(), 2, "0")}:`
                 + `${_.padStart(Math.floor(duration.minutes()).toString(), 2, "0")}:`
                 + `${_.padStart(Math.floor(duration.seconds()).toString(), 2, "0")}.`
-                + `${duration.milliseconds()}`;
+                + `${Math.ceil(duration.milliseconds())}`;
         }
     }
 }

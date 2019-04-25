@@ -2,21 +2,48 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 // Licensed under the MIT License. See License file under the project root for license information.
 //-----------------------------------------------------------------------------
-import { env, Platform } from "./env";
-import { local } from "./resolve";
+
+import { local } from "donuts.node/path";
+import { ISfxModuleManager } from "sfx.module-manager";
 
 export function getIconPath(): string {
-    switch (env.platform) {
-        case Platform.Windows:
-            return local("../icons/icon.ico");
+    switch (process.platform) {
+        case "win32":
+            return local("./icons/icon.ico", true);
 
-        case Platform.MacOs:
-            return local("../icons/icon.icns");
+        case "darwin":
+            return local("./icons/icon.icns", true);
 
-        case Platform.Linux:
+        case "linux":
         default:
-            return local("../icons/icon128x128.png");
+            return local("./icons/icon128x128.png", true);
     }
 }
 
-export const appCodeName: string = require("../package.json").name;
+export function logUnhandledRejection(): void {
+    process.on("unhandledRejection", (reason, promise) => {
+        if (typeof sfxModuleManager !== "undefined") {
+            sfxModuleManager.getComponentAsync<Donuts.Logging.ILog>("logging.default")
+                .then((log) => {
+                    if (log) {
+                        log.writeErrorAsync("Unhandled promise rejection: {}", reason);
+                    } else {
+                        console.error("Unhandled promise rejection: ", promise, reason);
+                    }
+                });
+        } else {
+            console.error("Unhandled promise rejection: ", promise, reason);
+        }
+    });
+}
+
+export function injectModuleManager(moduleManager: Donuts.Modularity.IModuleManager): ISfxModuleManager {
+    Object.defineProperty(global, "sfxModuleManager", {
+        writable: false,
+        configurable: false,
+        enumerable: false,
+        value: moduleManager
+    });
+
+    return moduleManager;
+}

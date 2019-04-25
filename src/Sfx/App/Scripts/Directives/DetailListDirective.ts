@@ -13,11 +13,12 @@ module Sfx {
         public templateUrl = "partials/detail-list.html";
         public scope = {
             list: "=",
-            listSettings: "="
+            listSettings: "=",
+            innerScroll: "=?"
         };
+        public transclude = true;
 
         public link($scope: any, element: JQuery, attributes: any, ctrl: DetailListController) {
-
             // The list passed in can be a normal array or a DataModelCollection object.
             // When it is a normal array, the directive only updates when the list reference
             // itself is changed or any items are added/removed from the list.
@@ -34,6 +35,13 @@ module Sfx {
                 }
             });
 
+            $scope.$watch("list.isInitialized", (newVal, oldVal) => {
+                // When isInitialized becomes false which means it got cleared.
+                if ($scope.list && newVal === false && oldVal === true) {
+                    ctrl.updateList();
+                }
+            });
+
             // Update the list every time the list has finished refreshing
             $scope.$watch("list.isRefreshing", () => {
                 if ($scope.list && angular.isDefined($scope.list.isRefreshing) && !$scope.list.isRefreshing) {
@@ -42,8 +50,10 @@ module Sfx {
             });
 
             // Watch search keyword, the sort and filter will be controlled on view through controller
-            $scope.$watch("listSettings.search", () => {
-                ctrl.updateList();
+            $scope.$watch("listSettings.search", (searchText) => {
+                if (searchText !== undefined) {
+                    ctrl.updateList();
+                }
             });
         }
     }
@@ -51,7 +61,7 @@ module Sfx {
     export class DetailListController {
         public static $inject = ["$filter", "$scope"];
 
-        public constructor(private $filter: angular.IFilterService, private $scope: any) {
+        public constructor(private $filter: angular.IFilterService, public $scope: any) {
         }
 
         public updateList() {
@@ -61,8 +71,9 @@ module Sfx {
             }
         }
 
-        public handleClickRow(item: any): void {
-            if (this.$scope.listSettings.secondRowCollapsible) {
+        public handleClickRow(item: any, event: any): void {
+            if (event && event.target !== event.currentTarget) { return; }
+            if (this.$scope.listSettings.secondRowCollapsible && this.$scope.listSettings.showSecondRow(item)) {
                 item.isSecondRowCollapsed = !item.isSecondRowCollapsed;
             }
         }

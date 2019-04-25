@@ -10,6 +10,9 @@ module Sfx {
         Items: T[];
     }
 
+    export interface IRawList<T> extends Array<T> {
+    }
+
     export interface IRawApplication {
         Id: string;
         Name: string;
@@ -170,6 +173,7 @@ module Sfx {
         ActivityThreshold: string;
         ClusterCapacity: number;
         ClusterLoad: number;
+        CurrentClusterLoad: number;
         RemainingUnbufferedCapacity: number;
         NodeBufferPercentage: number;
         BufferedCapacity: number;
@@ -202,6 +206,44 @@ module Sfx {
 
     export interface IRawId {
         Id: string;
+    }
+
+    export interface IRawNetwork {
+        name: string;
+        properties: IRawNetworkProperties;
+    }
+
+    export interface IRawNetworkProperties {
+        kind: string;
+        networkAddressPrefix: string;
+        networkStatus: string;
+    }
+
+    export interface IRawNetworkOnApp {
+        networkName: string;
+    }
+
+    export interface IRawNetworkOnNode {
+        NetworkName: string;
+    }
+
+    export interface IRawAppOnNetwork {
+        ApplicationName: string;
+    }
+
+    export interface IRawNodeOnNetwork {
+        nodeName: string;
+    }
+
+    export interface IRawDeployedContainerOnNetwork {
+        ApplicationName: string;
+        NetworkName: string;
+        CodePackageName: string;
+        CodePackageVersion: string;
+        ServiceManifestName: string;
+        ServicePackageActivationId: string;
+        ContainerAddress: string;
+        ContainerId: string;
     }
 
     export interface IRawNode {
@@ -657,4 +699,30 @@ module Sfx {
         ComposeFileContent: string;
         RepositoryCredential?: IRawRepositoryCredential;
     }
+
+    export interface IRawImageStoreContent {
+        StoreFiles: IRawStoreFile[];
+        StoreFolders: IRawStoreFolder[];
+    }
+
+    export interface IRawStoreFile {
+        FileSize: string;
+        FileVersion: IRawFileVersion;
+        ModifiedDate: string;
+        StoreRelativePath: string;
+    }
+
+    export interface IRawFileVersion {
+        VersionNumber: string;
+    }
+
+    export interface IRawStoreFolder {
+        StoreRelativePath: string;
+        FileCount: string;
+    }
+
+    export interface IRawClusterVersion {
+        Version: string;
+    }
+
 }

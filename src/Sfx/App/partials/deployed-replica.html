@@ -1,4 +1,4 @@
-<sfx-detail-view-navbar ctrl="deployedReplicaCtrl" type="{{replica.isStatelessService ? 'Deployed Instance' : 'Deployed Replica'}}" name="{{replica.id}}"></sfx-detail-view-navbar>
+<sfx-detail-view-navbar ctrl="deployedReplicaCtrl" type="{{replica.isStatelessService ? 'Deployed Instance' : 'Deployed Replica'}}" name="{{replica.id}}" actions="replica.actions"></sfx-detail-view-navbar>
 
 <div class="main-view">
     <div sfx-include src="'tab_' + deployedReplicaCtrl.activeTabId" ng-if="deployedReplicaCtrl.activeTabId"></div>
@@ -6,7 +6,7 @@
     <script type="text/ng-template" id="tab_essentials">
         <div class="detail-pane essen-pane">
             <div class="table-responsive">
-                <table class="essen-table">
+                <table class="essen-table" role="presentation">
                     <tr>
                         <th>Id</th>
                         <th>Service Kind</th>
@@ -28,7 +28,7 @@
                         <th ng-if="replica.servicePackageActivationId">Service Package Activation Id</th>
                     </tr>
                     <tr>
-                        <td ng-if="replica.isStatefulService">{{replica.raw.ReplicaRole}}</td>
+                        <td ng-if="replica.isStatefulService">{{replica.role}}</td>
                         <td ng-if="replica.servicePackageActivationId">{{replica.servicePackageActivationId}}</td>
                     </tr>
                 </table>

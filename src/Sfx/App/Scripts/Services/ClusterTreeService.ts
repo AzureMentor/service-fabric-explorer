@@ -8,6 +8,7 @@ module Sfx {
     export class ClusterTreeService {
         public tree: TreeViewModel;
         private clusterHealth: ClusterHealth;
+        private cm: ClusterManifest;
 
         constructor(
             private $q: angular.IQService,
@@ -20,6 +21,7 @@ module Sfx {
         public init() {
             this.clusterHealth = new ClusterHealth(this.data, HealthStateFilterFlags.None, HealthStateFilterFlags.None, HealthStateFilterFlags.None);
             this.tree = new TreeViewModel(this.$q, () => this.getRootNode());
+            this.cm = new ClusterManifest(this.data);
         }
 
         public selectTreeNode(path: string[], skipSelectAction?: boolean): ng.IPromise<any> {
@@ -70,6 +72,9 @@ module Sfx {
         }
 
         private getGroupNodes(): angular.IPromise<ITreeNode[]> {
+            //let cm: ClusterManifest = new ClusterManifest(this.data);
+            let cmPromise = this.cm.ensureInitialized(false);
+
             let appsNode;
             let getAppsPromise = this.data.getApps().then(apps => {
                 appsNode = {
@@ -114,8 +119,28 @@ module Sfx {
                 };
             });
 
-            return this.$q.all([getAppsPromise, getNodesPromise, systemNodePromise]).then(() => {
-                return [appsNode, nodesNode, systemAppNode];
+
+
+            return cmPromise.then( () => {
+                //check to see if network inventory manager is enabled and if SFX should display Network information
+                if (this.cm.isNetworkInventoryManagerEnabled) {
+                    let networkNode;
+                    let getNetworkPromise = this.data.getNetworks(true).then(net => {
+                        networkNode = {
+                            nodeId: IdGenerator.networkGroup(),
+                            displayName: () => "Networks",
+                            childrenQuery: () => this.getNetworks(),
+                            selectAction: () => this.routes.navigate(() => net.viewPath),
+                            alwaysVisible: true
+                        };
+                    });
+                    return this.$q.all([getAppsPromise, getNodesPromise, getNetworkPromise, systemNodePromise]).then(() => {
+                        return [appsNode, nodesNode, networkNode, systemAppNode];
+                    });
+                }
+                return this.$q.all([getAppsPromise, getNodesPromise, systemNodePromise]).then(() => {
+                    return [appsNode, nodesNode, systemAppNode];
+                });
             });
         }
 
@@ -127,13 +152,23 @@ module Sfx {
                     return {
                         nodeId: IdGenerator.node(node.name),
                         displayName: () => {
+                            let suffix: string = "";
                             if (node.raw.NodeStatus !== NodeStatusConstants.Up) {
                                 if (node.raw.IsStopped) {
-                                    return node.name + " (Down (Stopped))";
+                                    suffix = "Down (Stopped)";
                                 } else {
-                                    return node.name + " (" + node.raw.NodeStatus + ")";
+                                    suffix = node.raw.NodeStatus;
                                 }
                             }
+
+                            if (node.raw.IsSeedNode) {
+                                suffix = "Seed Node" + (suffix === "" ? "" : " - " + suffix);
+                            }
+
+                            if (suffix !== "") {
+                                return `${node.name} (${suffix})`;
+                            }
+
                             return node.name;
                         },
                         selectAction: () => this.routes.navigate(() => node.viewPath),
@@ -147,6 +182,23 @@ module Sfx {
                         mergeClusterHealthStateChunk: (clusterHealthChunk: IClusterHealthChunk) => {
                             return node.deployedApps.mergeClusterHealthStateChunk(clusterHealthChunk);
                         }
+                    };
+                });
+            });
+        }
+
+        private getNetworks(): angular.IPromise<ITreeNode[]> {
+            // App type groups cannot be inferred from health chunk data, because we need all app types
+            // even there are currently no application instances for them.
+            return this.data.getNetworks(true).then(networks => {
+                return _.map(networks.collection, network => {
+                    return {
+
+                        nodeId: IdGenerator.network(network.name),
+                        displayName: () => network.name,
+                        selectAction: () => this.routes.navigate(() => network.viewPath),
+                        sortBy: () => [network.name],
+                        actions: network.actions
                     };
                 });
             });
@@ -254,11 +306,12 @@ module Sfx {
                     nodeId: IdGenerator.deployedReplica(replica.raw.PartitionId),
                     displayName: () => replica.isStatelessService
                         ? replica.id
-                        : replica.id + " (" + replica.raw.ReplicaRole + ")",
+                        : replica.id + " (" + replica.role + ")",
                     selectAction: () => this.routes.navigate(() => replica.viewPath),
                     sortBy: () => replica.isStatelessService
                         ? [replica.id]
-                        : [replica.replicaRoleSortPriority, replica.id]
+                        : [replica.replicaRoleSortPriority, replica.id],
+                    actions: replica.actions
                 };
             }));
         }
@@ -335,12 +388,13 @@ module Sfx {
                         nodeId: IdGenerator.replica(replica.id),
                         displayName: () => replica.isStatelessService
                             ? replica.raw.NodeName
-                            : `${replica.raw.ReplicaRole} (${replica.raw.NodeName})`,
+                            : `${replica.role} (${replica.raw.NodeName})`,
                         selectAction: () => this.routes.navigate(() => replica.viewPath),
                         badge: () => replica.healthState,
                         sortBy: () => replica.isStatelessService
                             ? [replica.raw.NodeName]
-                            : [replica.replicaRoleSortPriority, replica.raw.NodeName]
+                            : [replica.replicaRoleSortPriority, replica.raw.NodeName],
+                        actions: replica.actions
                     };
                 });
             });

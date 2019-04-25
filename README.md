@@ -3,9 +3,9 @@
 Service Fabric Explorer is an application for inspecting and managing cloud applications and nodes in a Microsoft Azure Service Fabric cluster.
 
 ## Build Status
-Windows | Linux | macOS
------------- | ------------- | -------------
-![Image of Windows Build Badge](https://msazure.visualstudio.com/_apis/public/build/definitions/b32aa71e-8ed2-41b2-9d77-5bc261222004/17273/badge) | ![Image of Linux Build Badge](https://msazure.visualstudio.com/_apis/public/build/definitions/b32aa71e-8ed2-41b2-9d77-5bc261222004/17274/badge) | ![Image of macOS Build Badge](https://msazure.visualstudio.com/_apis/public/build/definitions/b32aa71e-8ed2-41b2-9d77-5bc261222004/18832/badge) 
+Windows | Linux / macOS
+------------ | -------------
+![Image of Windows Build Badge](https://ci.appveyor.com/api/projects/status/ejfk6b0c3dlunkws/branch/master) | ![Image of Linux/macOS Build Badge](https://travis-ci.org/Microsoft/service-fabric-explorer.svg?branch=master) 
 
 ## Installation
 
@@ -25,7 +25,7 @@ For more information about the application and how to use it: https://docs.micro
 
 ## Developer Help and Documentation
 
-Service Fabric Explorer consists of two main components, an Angular based application (Sfx) and an Electron part to host the Angular application (Sfx-Stanalone).
+Service Fabric Explorer consists of two main components, an AngularJS based application (Sfx) and an Electron part to host the AngularJS application (Sfx-Standalone).
 
 ### Preparing the development machine
 
@@ -33,7 +33,7 @@ To develop Service Fabric Explorer, the following components are required.
 
 * Git: https://git-scm.com/
 * Python 2: https://www.python.org/
-* Node.js (LTS is preferred): https://nodejs.org/
+* Node.js (Latest is preferred): https://nodejs.org/
 * C++ Compiler
    * Windows: Visual C++ https://www.visualstudio.com/
    * Ubuntu: `sudo apt-get install -y build-essential`
@@ -47,12 +47,11 @@ Here's a list of common IDE used.
 ### Set up the development environment
 
 1. Clone the master branch.
-`git clone https://github.com/Azure/service-fabric-explorer.git <path to the local folder>`
+`git clone --recurse-submodules https://github.com/Microsoft/service-fabric-explorer.git <path to the local folder>`
 2. Install project dependencies: *This can be done inside VSCode or use a console window.*
    1. [SFX] Navigate to `src/Sfx` and run the following scripts.
    ```Shell
-   npm install
-   npm run bower-install
+   npm install   
    ```
    2. [SFX Standalone] Navigate to `src/Sfx-Standalone` and run the following scripts.
    ```Shell
@@ -60,20 +59,24 @@ Here's a list of common IDE used.
    ```
    3. [SFX Tests] Navigate to `test/SfxTests` and run the following scripts.
    ```Shell
-   npm install
-   npm run bower-install
+   npm install   
    ```
+   34. [SFX Proxy] Navigate to `src/Sfx-Proxy` and run the following scripts.
+   ```Shell
+   npm install   
+   ```
+
 3. Build projects
    * VSCode
       1. Open `src/Sfx`, `src/Sfx-Standalone` and `test/SfxTests` in VSCode with multiple-root workspce.
       2. Run following tasks orderly.
          * `clean-build` for Sfx
-         * `Clean-Build` for Sfx-Standalone
+         * `clean-build` for Sfx-Standalone
          * `clean-build` for SfxTests
    * Console
       1. Install Gulp globally on the machine.
       ```Shell
-      npm install gulp -g
+      npm install gulp-cli -g
       ```
       2. [SFX] Navigate to `src/Sfx` and run the following scripts.
       ```Shell
@@ -81,12 +84,36 @@ Here's a list of common IDE used.
       ```
       3. [SFX Standalone] Navigate to `src/Sfx-Standalone` and run the following scripts.
       ```Shell
-      gulp Clean-Build
+      gulp clean-build
       ```
       4. [SFX Tests] Navigate to `test/SfxTests` and run the following scripts.
       ```Shell
       gulp clean-build
       ```
+
+### Run Local http server/Proxy
+Navigate to `src/Sfx-Proxy`
+```Shell
+npm start
+```
+
+There are 2 optional flags
+-r which would record every request to a folder(by default called playbackRecordings) and overwriting if the same request is made again
+-p every request will be checked for a saved response and if one exists get served instead
+```Shell
+npm start -- -r -p
+```
+
+If proxying requests to a secure cluster the appsettings.json can also take a cert pfx location like
+{
+  "TargetCluster": {
+    "Url": "https://jejarryacesstesting.eastus.cloudapp.azure.com:19080",
+    "PFXLocation": "C:/some_cert.pfx",
+    "PFXPassPhrase": "password"
+  },
+  "recordFileBase": "playbackRecordings/"
+}
+
 
 ### Run unit tests for Sfx
 

@@ -5,11 +5,6 @@ body {
     background-color: $right-panel-background-color;
 }
 
-// Remove chrome input/textarea focus glow effect
-textarea, input {
-    outline: none;
-}
-
 .table {
     @extend .table-condensed;
 
@@ -19,7 +14,6 @@ textarea, input {
 }
 
 a, a:active, a:focus, a:hover {
-    outline: none !important;
     text-decoration: none !important;
 }
 
@@ -111,10 +105,6 @@ h1, h2, h3, h4, h5, h6 {
     bottom: 0;
     width: $splitter-width;
     cursor: col-resize;
-
-    &:focus {
-        outline: none;
-    }
 }
 
 .right-panel {
@@ -208,17 +198,23 @@ h1, h2, h3, h4, h5, h6 {
     }
 }
 
+.dropdown-toggle {
+
+    &:focus {
+        outline: 2px dotted;
+        outline: 2px solid -webkit-focus-ring-color;
+    }
+}
+
 .btn {
     padding: 4px 20px 6px;
-    outline: none !important;
 }
 
 .search-bar {
     padding: 0;
     position: relative;
     white-space: nowrap;
-
-    .reset-link {
+    .search-link, .reset-link {
         display: inline;
         margin-left: 5px;
     }
@@ -254,6 +250,7 @@ h1, h2, h3, h4, h5, h6 {
         color: $input-border-color-dark-bg;
     }
 }
+
 .dark-bg .input-flat, .dark-bg.input-flat {
     border-color: $input-border-color-dark-bg;
 
@@ -280,8 +277,10 @@ h1, h2, h3, h4, h5, h6 {
     width: 100%;
 
     &[readonly], &[disabled], &.disabled {
-        color: $input-color-disabled;
-        background-color: $input-background-color-disabled;
+        &:not(.clear-disabled) {
+            color: $input-color-disabled;
+            background-color: $input-background-color-disabled;
+        }
     }
 
     &.ng-invalid {
@@ -339,4 +338,19 @@ input[type=number]::-webkit-outer-spin-button {
             color: $badge-error-color;
         }
     }
+}
+
+.alert-info {
+    border: none;
+    border-left: #4BA0B5 solid 8px;
+}
+
+.alert-warning {
+    border: none;
+    border-left: #FFC646 solid 8px;
+}
+
+.alert-danger {
+    border: none;
+    border-left: #CB444A solid 8px;
 }

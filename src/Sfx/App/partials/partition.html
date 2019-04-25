@@ -1,12 +1,12 @@
 <sfx-detail-view-navbar ctrl="partitionCtrl" type="Partition" name="{{partitionCtrl.partitionId}}"></sfx-detail-view-navbar>
 
 <div class="main-view">
-    <div sfx-include src="'tab_' + partitionCtrl.activeTabId" ng-if="partitionCtrl.activeTabId"></div>
+    <div sfx-include src="'tab_' + partitionCtrl.activeTabId" ng-if="partitionCtrl.activeTabId" class="flex-child"></div>
 
     <script type="text/ng-template" id="tab_essentials">
         <div class="detail-pane essen-pane">
             <div class="table-responsive">
-                <table class="essen-table">
+                <table class="essen-table" role="presentation">
                     <tr>
                         <th>Id</th>
                         <th>Partition Kind</th>
@@ -36,8 +36,8 @@
                         <td ng-show="partition.isStatefulService && partition.partitionInformation.isPartitionKindInt64Range">{{partition.partitionInformation.raw.HighKey}}</td>
                     </tr>
                     <tr ng-show="partition.isStatefulService && partition.partitionInformation.isPartitionKindInt64Range">
-                        <th>Minimum Replica Size</th>
-                        <th>Target Replica Size</th>
+                        <th>Minimum Replica Set Size</th>
+                        <th>Target Replica Set Size</th>
                     </tr>
                     <tr ng-show="partition.isStatefulService && partition.partitionInformation.isPartitionKindInt64Range">
                         <td>{{partition.raw.MinReplicaSetSize}}</td>
@@ -74,5 +74,9 @@
             <h4>Load Information</h4>
             <sfx-detail-view-part data="partition.loadInformation"></sfx-detail-view-part>
         </div>
+    </script>
+
+    <script type="text/ng-template" id="tab_events">
+        <sfx-events-view events-list="partitionEvents" class="flex-child"></sfx-events-view>
     </script>
 </div>
